@@ -38,14 +38,29 @@ ACTION_LABELS = {
     'reorder_500': 'Reorder 500 units',
     'reorder_1000': 'Reorder 1,000 units',
     'reorder_1500': 'Reorder 1,500 units',
-    'select_A': 'Supplier A (reliable, pricier)',
-    'select_B': 'Supplier B (cheaper, less reliable)',
     'split_order': 'Split the order between A and B',
     'Standard Class': 'Standard shipping',
     'Second Class': 'Second-class shipping',
     'First Class': 'First-class shipping',
     'Same Day': 'Same-day shipping',
 }
+
+
+def action_label(action, rel_a, rel_b):
+    """Describe supplier actions using current reliability/cost settings."""
+    if action == 'select_A':
+        reliability = ('more reliable' if rel_a > rel_b else
+                       'less reliable' if rel_a < rel_b else 'equally reliable')
+        cost = ('pricier' if SupplyChainEnvV0.SUPPLIERS['A']['unit_cost'] >
+                SupplyChainEnvV0.SUPPLIERS['B']['unit_cost'] else 'cheaper')
+        return f"Supplier A ({reliability}, {cost})"
+    if action == 'select_B':
+        reliability = ('more reliable' if rel_b > rel_a else
+                       'less reliable' if rel_b < rel_a else 'equally reliable')
+        cost = ('pricier' if SupplyChainEnvV0.SUPPLIERS['B']['unit_cost'] >
+                SupplyChainEnvV0.SUPPLIERS['A']['unit_cost'] else 'cheaper')
+        return f"Supplier B ({reliability}, {cost})"
+    return ACTION_LABELS[action]
 
 INVENTORY_LABELS = {
     'stockout': 'out of stock',
@@ -137,40 +152,52 @@ def run_policy_episode(env, policy, agents, rng):
 
 
 def compare_policies(n_episodes, rel_a, rel_b, volatility):
+    """Evaluate policies against matched demand scenarios for a fairer test."""
     agents = load_trained_agents()
-    results = {}
-    for policy in ('learned', 'fixed', 'random'):
-        env = make_env(rel_a, rel_b, volatility, seed=1000)
-        rng = random.Random(7)
-        results[policy] = [run_policy_episode(env, policy, agents, rng) for _ in range(n_episodes)]
+    results = {policy: [] for policy in ('learned', 'fixed', 'random')}
+    for episode in range(n_episodes):
+        seed = 1000 + episode
+        for policy in ('learned', 'fixed', 'random'):
+            env = make_env(rel_a, rel_b, volatility, seed=seed)
+            rng = random.Random(7000 + episode)
+            results[policy].append(run_policy_episode(env, policy, agents, rng))
     return results
 
 
 @st.cache_data
 def time_in_each_situation(n_episodes=100):
-    """How often the trained policy ends up in each situation under the
-    default conditions. Used to flag table rows that are rarely or never seen."""
+    """Evaluation-state frequencies under defaults, not training counts.
+
+    Supplier/logistics frequencies count only days when an order is placed.
+    """
     agents = load_trained_agents()
-    env = make_env(0.90, 0.70, 1.0, seed=1000)
-    inv_counts, sup_counts, total = Counter(), Counter(), 0
-    for _ in range(n_episodes):
+    inv_counts, sup_counts, log_counts = Counter(), Counter(), Counter()
+    total_days = total_orders = 0
+    for episode in range(n_episodes):
+        env = make_env(0.90, 0.70, 1.0, seed=1000 + episode)
         state = env.reset()
         done = False
         while not done:
             inv_counts[state_to_key(state)] += 1
-            sup_counts[supplier_state_key(state)] += 1
-            total += 1
-            state, _, done, _ = env.step(*policy_actions('learned', state, agents))
-    return ({k: v / total for k, v in inv_counts.items()},
-            {k: v / total for k, v in sup_counts.items()})
+            total_days += 1
+            actions = policy_actions('learned', state, agents)
+            if env.REORDER_QTY[actions[0]] > 0:
+                sup_counts[supplier_state_key(state)] += 1
+                log_counts[logistics_state_key(state)] += 1
+                total_orders += 1
+            state, _, done, _ = env.step(*actions)
+    inv_shares = {k: v / total_days for k, v in inv_counts.items()} if total_days else {}
+    sup_shares = {k: v / total_orders for k, v in sup_counts.items()} if total_orders else {}
+    log_shares = {k: v / total_orders for k, v in log_counts.items()} if total_orders else {}
+    return inv_shares, sup_shares, log_shares
 
 
-def preferred_action_table(agent, shares, label_fn):
+def preferred_action_table(agent, shares, label_fn, action_fn=None):
     rows = []
     for key, q_values in agent.Q.items():
         best = max(q_values, key=q_values.get)
         rows.append({'Situation': label_fn(key),
-                     'Preferred action': ACTION_LABELS[best],
+                     'Preferred action': action_fn(best) if action_fn else ACTION_LABELS[best],
                      'share': shares.get(key, 0.0)})
     df = pd.DataFrame(rows).sort_values('share', ascending=False)
     df['Time spent here'] = df['share'].map(lambda x: f"{x:.1%}")
@@ -272,8 +299,9 @@ with st.expander("How to use this page"):
         "1. Use the sidebar to pick who makes decisions. **Learned agents** are the trained "
         "ones; **Fixed rule** is a simple comparison.\n"
         "2. Press **Advance** to move forward day by day, or **Run to day 90** for a whole episode.\n"
-        "3. Drag the sliders to make suppliers less reliable or demand more erratic, and see "
-        "how each approach copes.\n"
+        "3. Drag the sliders to change simulated supplier reliability or demand volatility. "
+        "The trained Q-tables are not retrained when sliders move, so this tests robustness "
+        "of the existing policy rather than teaching it a new policy.\n"
         "4. The **Compare policies** tab tests all approaches over many episodes at once.\n"
         "5. The **What the agents learned** tab shows the rules they ended up with."
     )
@@ -284,7 +312,7 @@ with st.expander("What do the terms mean?"):
         "- **Pending (in transit)**: units already ordered but not yet arrived.\n"
         "- **Stockout**: customers wanted more than the warehouse had, so some sales were lost.\n"
         "- **Reward**: the score the agents try to maximise. Units sold add points; stockouts, "
-        "excess stock, late deliveries, shipping cost and supplier failures take points away.\n"
+        "excess stock, late deliveries, procurement/transport costs and supplier failures take points away.\n"
         "- **Fulfillment rate**: share of customer demand that was actually met."
     )
 
@@ -301,7 +329,7 @@ with tab_live:
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Day", f"{state['time_step']} / {EPISODE_DAYS}")
-    c2.metric("Units in warehouse", f"{state['inventory_level']:,}")
+    c2.metric("Units in warehouse", f"{state['inventory_level']:,.0f}")
     c3.metric("Units on order", f"{state['pending_orders_intransit']:,}")
     c4.metric("Out of stock?", "Yes" if state['stockout_flag'] else "No")
 
@@ -310,7 +338,7 @@ with tab_live:
         d = st.session_state.last_decision
         a, b, c = st.columns(3)
         a.info(f"**Inventory agent**\n\n{ACTION_LABELS[d['inventory']]}")
-        b.info(f"**Supplier agent**\n\n{ACTION_LABELS[d['supplier']]}")
+        b.info(f"**Supplier agent**\n\n{action_label(d['supplier'], rel_a, rel_b)}")
         c.info(f"**Logistics agent**\n\n{ACTION_LABELS[d['logistics']]}")
         note = f"Situation when these were chosen: {d['situation']}."
         if d['inventory'] == 'no_reorder':
@@ -356,8 +384,9 @@ with tab_live:
 with tab_compare:
     st.write(
         "Plays several full 90-day episodes with each approach under the conditions "
-        "currently set in the sidebar. Each approach starts from the same random seed, "
-        "so this is a fair side-by-side test."
+        "currently set in the sidebar. Each policy is evaluated against the same seeded "
+        "demand scenario per episode. Supplier and shipping outcomes remain stochastic, "
+        "so this is a more controlled comparison, not a guarantee of identical outcomes."
     )
     n_episodes = st.slider("Episodes per approach", 10, 200, 50, 10)
 
@@ -422,12 +451,14 @@ with tab_learned:
         "actually spend in that situation."
     )
     st.caption(
-        "Situations with a very small share of time were rarely visited during training, so "
-        "their preferences are based on little experience and should not be over-read."
+        "The frequency column shows how often each state appeared during a separate 100-episode "
+        "evaluation under default settings; it is not a count of training visits. For supplier "
+        "and logistics tables, only days with an order are counted because those choices have "
+        "no effect when no order is placed. Rare states should still be interpreted cautiously."
     )
 
     inv_agent, sup_agent, log_agent = agents
-    inv_shares, sup_shares = time_in_each_situation()
+    inv_shares, sup_shares, log_shares = time_in_each_situation()
 
     def inv_label(key):
         return f"{INVENTORY_LABELS[key[0]].capitalize()}, {PENDING_LABELS[key[1]]}"
@@ -442,13 +473,18 @@ with tab_learned:
 
     st.subheader("Supplier agent")
     st.caption("Decides which supplier gets the order. Only matters on days when something is ordered.")
-    st.dataframe(preferred_action_table(sup_agent, sup_shares, sup_label),
-                 hide_index=True)
+    sup_df = preferred_action_table(
+        sup_agent, sup_shares, sup_label,
+        action_fn=lambda action: action_label(action, rel_a, rel_b),
+    )
+    sup_df = sup_df.rename(columns={'Time spent here': 'Share of order decisions'})
+    st.dataframe(sup_df, hide_index=True)
 
     st.subheader("Logistics agent")
     st.caption("Decides the shipping method. Only matters on days when something is ordered.")
-    st.dataframe(preferred_action_table(log_agent, inv_shares, inv_label),
-                 hide_index=True)
+    log_df = preferred_action_table(log_agent, log_shares, inv_label)
+    log_df = log_df.rename(columns={'Time spent here': 'Share of order decisions'})
+    st.dataframe(log_df, hide_index=True)
 
     with st.expander("Raw Q-values"):
         st.write("Inventory agent")

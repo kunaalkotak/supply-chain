@@ -20,6 +20,7 @@ Reward (one shared number for all three agents, weights are adjustable):
         - w_holding   * holding_cost * units_above_70%_of_capacity
         - w_delay     * late_shipments_arriving_today
         - w_transport * transport_cost
+        - w_procurement * procurement_cost
         - w_supplier  * 1 if a supplier failed to deliver this step
 """
 
@@ -37,6 +38,9 @@ class RewardWeights:
     w_holding: float = 1.0
     w_delay: float = 1.5
     w_transport: float = 0.01
+    # Procurement costs are currency-like units, scaled to keep reward terms
+    # comparable to sales and the other cost terms.
+    w_procurement: float = 0.01
     w_supplier: float = 1.0
 
 
@@ -112,7 +116,13 @@ class SupplyChainEnvV0:
         self.initial_inventory = initial_inventory                   # [SIMULATED]
         self.holding_cost_per_unit = holding_cost_per_unit           # [SIMULATED]
         self.weights = reward_weights or RewardWeights()
-        self.rng = random.Random(seed)
+        # Independent random streams ensure policies using the same seed see
+        # the same demand sequence, even if their actions use different numbers
+        # of supplier/shipping random draws.
+        seed_value = random.SystemRandom().randrange(0, 2**32) if seed is None else int(seed)
+        self.demand_rng = random.Random(seed_value + 100_003)
+        self.supplier_rng = random.Random(seed_value + 200_003)
+        self.shipping_rng = random.Random(seed_value + 300_007)
 
         self.reset()
 
@@ -128,7 +138,7 @@ class SupplyChainEnvV0:
         # [REAL] Pick a random day from the real history of daily quantities.
         # A fitted trend was tried earlier and predicted no better than the
         # plain average, so simple resampling is used instead.
-        return self.rng.choice(self.demand_pool)
+        return self.demand_rng.choice(self.demand_pool)
 
     def _get_state(self):
         day_of_week = self.t % 7
@@ -163,14 +173,14 @@ class SupplyChainEnvV0:
 
             for supplier_id, qty in allocations:
                 params = self.SUPPLIERS[supplier_id]
-                fulfilled = self.rng.random() < params['reliability']  # [SIMULATED]
+                fulfilled = self.supplier_rng.random() < params['reliability']  # [SIMULATED]
                 if not fulfilled:
                     supplier_failure = True
                     continue  # this part of the order is lost
 
                 # 3. Logistics agent decides how it is shipped
                 mode_info = self.mode_stats[logistics_action]  # [REAL]
-                is_late = self.rng.random() < mode_info['delay_probability']  # [REAL prob]
+                is_late = self.shipping_rng.random() < mode_info['delay_probability']  # [REAL prob]
                 base_duration = mode_info['avg_duration_days']  # [REAL]
                 extra_delay = base_duration if is_late else 0
                 lead_time = params['lead_time_days']  # [SIMULATED]
@@ -208,7 +218,15 @@ class SupplyChainEnvV0:
 
         # 6. Shared reward
         excess_inventory = max(0, self.inventory - self.warehouse_capacity * 0.7)
-        transport_cost = self.TRANSPORT_COST_PER_UNIT[logistics_action] * order_qty
+        # Only successful allocations become shipments, so only those units
+        # incur procurement and transportation costs in this model.
+        created_shipments = info.get('shipments_created', [])
+        shipped_qty = sum(item['qty'] for item in created_shipments)
+        procurement_cost = sum(
+            item['qty'] * self.SUPPLIERS[item['supplier']]['unit_cost']
+            for item in created_shipments
+        )
+        transport_cost = self.TRANSPORT_COST_PER_UNIT[logistics_action] * shipped_qty
         w = self.weights
         reward = (
             w.w_fulfill * fulfilled
@@ -216,6 +234,7 @@ class SupplyChainEnvV0:
             - w.w_holding * self.holding_cost_per_unit * excess_inventory
             - w.w_delay * late_arrivals
             - w.w_transport * transport_cost
+            - w.w_procurement * procurement_cost
             - w.w_supplier * (1 if supplier_failure else 0)
         )
 
@@ -226,6 +245,9 @@ class SupplyChainEnvV0:
             'arrived_qty': arrived_qty,
             'late_arrivals': late_arrivals,
             'supplier_failure': supplier_failure,
+            'shipped_qty': shipped_qty,
+            'procurement_cost': procurement_cost,
+            'transport_cost': transport_cost,
         })
 
         self.t += 1

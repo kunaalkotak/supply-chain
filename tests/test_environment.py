@@ -119,6 +119,37 @@ def test_reward_is_deterministic_given_seed():
     assert r1 == r2
 
 
+def test_demand_sequence_is_independent_of_supplier_and_shipping_actions():
+    """Same seed should give policies the same demand sequence despite actions."""
+    env1 = make_env(seed=123, max_steps=12)
+    env2 = make_env(seed=123, max_steps=12)
+    demands1, demands2 = [], []
+    for _ in range(12):
+        _, _, _, info1 = env1.step('no_reorder', 'select_A', 'Standard Class')
+        _, _, _, info2 = env2.step('reorder_1500', 'split_order', 'Same Day')
+        demands1.append(info1['demand'])
+        demands2.append(info2['demand'])
+    assert demands1 == demands2
+
+
+def test_no_reorder_has_no_procurement_or_transport_cost():
+    env = make_env(seed=11, max_steps=2)
+    _, _, _, info = env.step('no_reorder', 'select_A', 'Same Day')
+    assert info['shipped_qty'] == 0
+    assert info['procurement_cost'] == 0
+    assert info['transport_cost'] == 0
+
+
+def test_procurement_and_transport_costs_are_reported_for_successful_shipments():
+    env = make_env(seed=1, max_steps=2)
+    # Use guaranteed reliability so the order is successful deterministically.
+    env.SUPPLIERS['A']['reliability'] = 1.0
+    _, _, _, info = env.step('reorder_500', 'select_A', 'Standard Class')
+    assert info['shipped_qty'] == 500
+    assert info['procurement_cost'] == 500 * env.SUPPLIERS['A']['unit_cost']
+    assert info['transport_cost'] == 500 * env.TRANSPORT_COST_PER_UNIT['Standard Class']
+
+
 def test_demand_values_come_from_real_calibration_pool():
     env = make_env(seed=5, max_steps=50)
     env.reset()
