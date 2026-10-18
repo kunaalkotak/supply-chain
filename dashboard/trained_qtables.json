@@ -1,0 +1,242 @@
+{
+  "inventory": {
+    "high|a_lot": {
+      "no_reorder": 438.8057799002081,
+      "reorder_500": 191.34236576983676,
+      "reorder_1000": 192.8264749445427,
+      "reorder_1500": 191.01003425571642
+    },
+    "high|none": {
+      "no_reorder": 542.2139761154933,
+      "reorder_500": 522.3524878393213,
+      "reorder_1000": 378.6867066328136,
+      "reorder_1500": 402.42408491951045
+    },
+    "high|some": {
+      "no_reorder": 507.3061041871214,
+      "reorder_500": 394.2436161855615,
+      "reorder_1000": 369.141478990639,
+      "reorder_1500": 352.79292852601463
+    },
+    "low|a_lot": {
+      "no_reorder": 631.2025170369249,
+      "reorder_500": 520.5450713500808,
+      "reorder_1000": 580.536019293602,
+      "reorder_1500": 565.4521705549834
+    },
+    "low|none": {
+      "no_reorder": 554.5132995652848,
+      "reorder_500": 611.7743643490442,
+      "reorder_1000": 526.8037133563288,
+      "reorder_1500": 557.3738509685897
+    },
+    "low|some": {
+      "no_reorder": 569.1670552966685,
+      "reorder_500": 617.3367875924071,
+      "reorder_1000": 553.9446754060064,
+      "reorder_1500": 547.8233385710402
+    },
+    "medium|a_lot": {
+      "no_reorder": 627.4643062027021,
+      "reorder_500": 418.05399092716806,
+      "reorder_1000": 440.9988068343747,
+      "reorder_1500": 479.60838477881765
+    },
+    "medium|none": {
+      "no_reorder": 561.0615931779612,
+      "reorder_500": 601.2016760125641,
+      "reorder_1000": 568.6160880371017,
+      "reorder_1500": 524.2175773873962
+    },
+    "medium|some": {
+      "no_reorder": 548.3277249665636,
+      "reorder_500": 602.9021547569735,
+      "reorder_1000": 546.7762808888292,
+      "reorder_1500": 542.8226980652778
+    },
+    "overstock|a_lot": {
+      "no_reorder": 230.98065603849676,
+      "reorder_500": 78.87610094602162,
+      "reorder_1000": 71.98130729172507,
+      "reorder_1500": 43.298529495132016
+    },
+    "overstock|none": {
+      "no_reorder": 424.97251463712223,
+      "reorder_500": 278.41842969432855,
+      "reorder_1000": 219.62273279592293,
+      "reorder_1500": 180.7258325886894
+    },
+    "overstock|some": {
+      "no_reorder": 317.82534552733966,
+      "reorder_500": 203.4327323586246,
+      "reorder_1000": 165.65088099804342,
+      "reorder_1500": 186.76595406397843
+    },
+    "stockout|a_lot": {
+      "no_reorder": 248.54716571714056,
+      "reorder_500": -98.66913396253132,
+      "reorder_1000": -89.71085641980662,
+      "reorder_1500": -56.6582763701376
+    },
+    "stockout|some": {
+      "no_reorder": 0.0,
+      "reorder_500": -16.8635251948691,
+      "reorder_1000": -2.814831769621531,
+      "reorder_1500": -4.441799305258623
+    },
+    "very_low|a_lot": {
+      "no_reorder": 612.9464555373203,
+      "reorder_500": 427.7257107428224,
+      "reorder_1000": 491.4714355687137,
+      "reorder_1500": 430.83466721379847
+    },
+    "very_low|none": {
+      "no_reorder": 210.08130608488852,
+      "reorder_500": 289.4747161315385,
+      "reorder_1000": 412.92179997564847,
+      "reorder_1500": 338.4296486897559
+    },
+    "very_low|some": {
+      "no_reorder": 438.05127704987217,
+      "reorder_500": 589.8633473235785,
+      "reorder_1000": 440.96045978323343,
+      "reorder_1500": 446.10245789866394
+    }
+  },
+  "supplier": {
+    "high": {
+      "select_A": 445.5493476093267,
+      "select_B": 468.26821359118674,
+      "split_order": 464.82042549286035
+    },
+    "low": {
+      "select_A": 623.6835120055954,
+      "select_B": 585.6065533924469,
+      "split_order": 583.9086148946765
+    },
+    "medium": {
+      "select_A": 603.6978847499578,
+      "select_B": 560.6509001001473,
+      "split_order": 554.4987683019517
+    },
+    "overstock": {
+      "select_A": 199.67780701795758,
+      "select_B": 171.7912839369304,
+      "split_order": 338.5398615213837
+    },
+    "stockout": {
+      "select_A": -56.33510958445327,
+      "select_B": 245.088696328919,
+      "split_order": -89.46867099742107
+    },
+    "very_low": {
+      "select_A": 619.3039927519214,
+      "select_B": 503.22404804741745,
+      "split_order": 468.51684304710267
+    }
+  },
+  "logistics": {
+    "high|a_lot": {
+      "Standard Class": 173.96139255177758,
+      "Second Class": 238.97327854458243,
+      "First Class": 405.3363829889341,
+      "Same Day": 231.2673125629817
+    },
+    "high|none": {
+      "Standard Class": 531.0229285884542,
+      "Second Class": 515.5587971137606,
+      "First Class": 549.7691675486665,
+      "Same Day": 521.7048245107034
+    },
+    "high|some": {
+      "Standard Class": 426.86591227770396,
+      "Second Class": 424.4401608392829,
+      "First Class": 422.10803086686775,
+      "Same Day": 482.86671899553
+    },
+    "low|a_lot": {
+      "Standard Class": 627.616751299011,
+      "Second Class": 514.425971653618,
+      "First Class": 579.6354661323421,
+      "Same Day": 564.5904853760258
+    },
+    "low|none": {
+      "Standard Class": 606.5858835698725,
+      "Second Class": 541.9421519953041,
+      "First Class": 535.1630735572321,
+      "Same Day": 560.1890143201638
+    },
+    "low|some": {
+      "Standard Class": 561.6553749254603,
+      "Second Class": 509.9923635581497,
+      "First Class": 541.4454723383245,
+      "Same Day": 613.3838152151488
+    },
+    "medium|a_lot": {
+      "Standard Class": 510.7630761117827,
+      "Second Class": 514.3593473730207,
+      "First Class": 622.131837866782,
+      "Same Day": 483.15743307496757
+    },
+    "medium|none": {
+      "Standard Class": 563.3284404242311,
+      "Second Class": 583.8643467781944,
+      "First Class": 598.5716442203997,
+      "Same Day": 571.3052116176751
+    },
+    "medium|some": {
+      "Standard Class": 599.3210294293727,
+      "Second Class": 537.7601262295049,
+      "First Class": 563.4909339033919,
+      "Same Day": 533.3372891942859
+    },
+    "overstock|a_lot": {
+      "Standard Class": 212.20895873708668,
+      "Second Class": 87.49974286094668,
+      "First Class": 82.36367352036962,
+      "Same Day": 86.78692381934218
+    },
+    "overstock|none": {
+      "Standard Class": 395.5010047692883,
+      "Second Class": 260.06463438249096,
+      "First Class": 276.0100581888197,
+      "Same Day": 280.0021266680157
+    },
+    "overstock|some": {
+      "Standard Class": 283.64499603642344,
+      "Second Class": 224.87326014461524,
+      "First Class": 228.71665658083867,
+      "Same Day": 216.64197161048006
+    },
+    "stockout|a_lot": {
+      "Standard Class": -90.41546422610645,
+      "Second Class": 227.0129951323203,
+      "First Class": -93.6437958538853,
+      "Same Day": -63.73073085452502
+    },
+    "stockout|some": {
+      "Standard Class": 0.0,
+      "Second Class": -3.237165182523487,
+      "First Class": -17.96124461690268,
+      "Same Day": -0.9014477803275014
+    },
+    "very_low|a_lot": {
+      "Standard Class": 391.44331472826565,
+      "Second Class": 606.8293798580153,
+      "First Class": 442.58357784253707,
+      "Same Day": 429.8866998649777
+    },
+    "very_low|none": {
+      "Standard Class": 411.20251988738266,
+      "Second Class": 275.3881589896355,
+      "First Class": 299.1985987056288,
+      "Same Day": 283.15886849975675
+    },
+    "very_low|some": {
+      "Standard Class": 572.2731476227647,
+      "Second Class": 475.86293580437484,
+      "First Class": 432.2065823419969,
+      "Same Day": 443.47029934215544
+    }
+  }
+}
